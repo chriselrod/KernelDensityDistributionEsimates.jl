@@ -1,0 +1,10 @@
+name = "KernelDensityDistributionEsimates"
+uuid = "c99e8e5a-0b27-11e9-27b0-91a9e7b84b44"
+authors = ["Chris Elrod <elrodc@gmail.com>"]
+version = "0.1.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
