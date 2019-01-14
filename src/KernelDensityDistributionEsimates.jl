@@ -1,10 +1,12 @@
 module KernelDensityDistributionEsimates
 
-using   Interpolations,
-        Distributions,    
+using   KernelDensity,
+        Interpolations,
+        Distributions,
+        StatsBase, Statistics,
         Gadfly
 
-
+export KDE
 
 struct KDE{T,ITP <: ScaledInterpolation} <: ContinuousUnivariateDistribution
     x::StepRangeLen{T,Base.TwicePrecision{T},Base.TwicePrecision{T}}
@@ -26,8 +28,7 @@ function KDE(kde::UnivariateKDE)
 end
 KDE(distances::AbstractVector) = KDE(kde(distances))
 KDE(distances::AbstractVector, weights::AbstractVector) = KDE(kde(distances, weights = weights))
-KDE(distances::UniformSamples) = KDE(kde(distances.distances))
-KDE(distances::WeightedSamples) = KDE(kde(distances.distances, weights = distances.weights))
+
 
 # Parameters are summarized by the full (x, density) set
 StatsBase.params(kde::KDE) = (kde.x, kde.density)
@@ -36,12 +37,13 @@ function Statistics.var(kde::KDE{T}) where T
     μ = zero(T)
     σ² = zero(T)
     x = kde.x; density = kde.density
-    @inbounds for i ∈ eachindex(x)
+    @inbounds @fastmath for i ∈ eachindex(x)
         xd = x[i] * density[i]
         μ += xd
         σ² += x[i] * xd
     end
-    (σ² - μ^2) * T(kde.x.step)
+    σ² * T(kde.x.step) - (μ * T(kde.x.step))^2
+    # σ², μ, T(kde.x.step)
 end
 Statistics.std(kde::KDE) = sqrt(var(kde))
 function Statistics.median(kde::KDE)
