@@ -6,7 +6,7 @@ using   KernelDensity,
         StatsBase, Statistics,
         Gadfly
 
-export KDE
+export KDE, kdemean
 
 struct KDE{T,ITP <: ScaledInterpolation} <: ContinuousUnivariateDistribution
     x::StepRangeLen{T,Base.TwicePrecision{T},Base.TwicePrecision{T}}
@@ -17,6 +17,10 @@ struct KDE{T,ITP <: ScaledInterpolation} <: ContinuousUnivariateDistribution
 end
 function KDE(kde::UnivariateKDE)
     x = kde.x
+    # if length(x) == 1
+    #     @show x
+    #     return KDE(x, kde.density, [1.0], [1.0], [1.0])
+    # end
     density = kde.density
     cumulative_density = cumsum(density)
     cumulative_density ./= cumulative_density[end]
@@ -29,6 +33,14 @@ end
 KDE(distances::AbstractVector) = KDE(kde(distances))
 KDE(distances::AbstractVector, weights::AbstractVector) = KDE(kde(distances, weights = weights))
 
+kdemean(kde::KDE) = mean(kde)
+function kdemean(kde::UnivariateKDE)
+    if length(kde.x) == 1
+        return kde.x[1]
+    else
+        return mean(KDE(kde))
+    end
+end
 
 # Parameters are summarized by the full (x, density) set
 StatsBase.params(kde::KDE) = (kde.x, kde.density)
@@ -60,14 +72,14 @@ function StatsBase.entropy(kde::KDE{T}) where T
     end
     out * T(kde.x.step)
 end
-function Distributions.pdf(kde::KDE, x::Real)
+function Distributions.pdf(kde::KDE, x::T) where T <: Real
     if (x < minimum(kde.x)) || (x > maximum(kde.x))
-        p = zero(T)
+        zero(T)
     else
-        p = kde.pdf(x)
+        max(zero(T), kde.pdf(x))
     end
 end
-Distributions.logpdf(kde::KDE, x::Real) = log(kde.pdf(x))
+Distributions.logpdf(kde::KDE, x::Real) = log(pdf(kde, x))
 function Distributions.cdf(kde::KDE{T}, x::Real) where T
     if x < minimum(kde.x)
         p = zero(T)
@@ -85,6 +97,6 @@ end
 function Gadfly.layer(kde::KDE, args::Vararg{Union{Function, Gadfly.Element, Theme, Type},N} where N)
     layer(x = kde.x, y = kde.density, Geom.line, args...)
 end
-
+Gadfly.plot(kde::KDE, args::Vararg{Union{Function, Gadfly.Element, Theme, Type},N} where N) = plot(layer(kde, args...))
 
 end # module
