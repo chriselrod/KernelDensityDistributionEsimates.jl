@@ -81,6 +81,7 @@ function Distributions.pdf(kde::KDE, x::T) where T <: Real
 end
 Distributions.logpdf(kde::KDE, x::Real) = log(pdf(kde, x))
 function Distributions.cdf(kde::KDE{T}, x::Real) where T
+    isnan(x) && return T(NaN)
     if x < minimum(kde.x)
         p = zero(T)
     elseif x > maximum(kde.x)
